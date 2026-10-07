@@ -1,0 +1,154 @@
+import { useEffect, useState } from 'react';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const ComplaintPage = () => {
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    category: 'Roads',
+    ward: 'Ward 12',
+    village: 'Gokul Nagar',
+    location: '17.1234, 74.7890',
+    priority: 'Medium'
+  });
+
+  const [message, setMessage] = useState('');
+  const [complaints, setComplaints] = useState([]);
+
+  useEffect(() => {
+    fetchComplaints();
+  }, []);
+
+  const fetchComplaints = async () => {
+    const token = localStorage.getItem('portalToken');
+    try {
+      const response = await fetch(`${API_BASE}/complaints`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) setComplaints(data.complaints || []);
+    } catch (error) {
+      console.error('Unable to fetch complaints', error);
+    }
+  };
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('portalToken');
+
+    try {
+      const response = await fetch(`${API_BASE}/complaints`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(form)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Complaint upload failed');
+      setMessage('Complaint submitted successfully');
+      setForm({
+        title: '',
+        description: '',
+        category: 'Roads',
+        ward: 'Ward 12',
+        village: 'Gokul Nagar',
+        location: '17.1234, 74.7890',
+        priority: 'Medium'
+      });
+      fetchComplaints();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
+  return (
+    <div className="page-shell complaint-page">
+      <div className="complaint-layout">
+        <form className="glass-panel complaint-form" onSubmit={handleSubmit}>
+          <h2>File a Complaint</h2>
+
+          <label>
+            Title
+            <input name="title" value={form.title} onChange={handleChange} required />
+          </label>
+
+          <label>
+            Description
+            <textarea name="description" value={form.description} onChange={handleChange} rows={5} required />
+          </label>
+
+          <div className="two-col">
+            <label>
+              Category
+              <select name="category" value={form.category} onChange={handleChange}>
+                <option>Roads</option>
+                <option>Water Supply</option>
+                <option>Sanitation</option>
+                <option>Streetlights</option>
+                <option>Drainage</option>
+                <option>Electricity</option>
+              </select>
+            </label>
+
+            <label>
+              Priority
+              <select name="priority" value={form.priority} onChange={handleChange}>
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+                <option>Critical</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="two-col">
+            <label>
+              Ward
+              <input name="ward" value={form.ward} onChange={handleChange} />
+            </label>
+
+            <label>
+              Village
+              <input name="village" value={form.village} onChange={handleChange} />
+            </label>
+          </div>
+
+          <label>
+            GPS Location
+            <input name="location" value={form.location} onChange={handleChange} />
+          </label>
+
+          <button type="submit" className="primary-btn full-width">Submit Complaint</button>
+          {message && <p className="status-message">{message}</p>}
+        </form>
+
+        <div className="glass-panel complaint-list-panel">
+          <h2>Recent Complaints</h2>
+          <ul className="list-card">
+            {complaints.length > 0 ? complaints.map((item) => (
+              <li key={item.id}>
+                <div>
+                  <strong>{item.title}</strong>
+                  <small>{item.category} • {item.village}</small>
+                </div>
+                <span>{item.status}</span>
+              </li>
+            )) : <li>No complaints available</li>}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ComplaintPage;
